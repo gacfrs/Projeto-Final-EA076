@@ -51,6 +51,7 @@ Servo s_vert;
 LiquidCrystal lcd(12, 11, 6, 4, 3, 2);
 int portasolar = A5;
 float tensao_placa = 0;
+int flag_write;
 
 void setup() {
   Serial.begin(9600);
@@ -90,21 +91,13 @@ void Int_Timer() {
 
   tensao_placa = analogRead(portasolar);
   tensao_placa = map (tensao_placa, 0, 650, 0, 256);
-  tensao_placa = tensao_placa / 100;
+  flag_write =1;
   
-  lcd.setCursor(0, 0);
-  lcd.print("Voltagem : ");
-  lcd.print(tensao_placa);
-  lcd.setCursor(0, 1);
-  lcd.print("Capacida :");
-  tensao_placa = tensao_placa * 40;
-  lcd.print(tensao_placa);
-  lcd.print("%");
+  
 
   /* if(compara_hor >= faixa){
      on_horiz=1;
     }
-
      on_horiz=1;
     /*
      Serial.print(sValue_left);
@@ -135,8 +128,18 @@ void Int_Timer() {
 }
 
 void loop() {
-
-
+int capacity;
+if (flag_write==1)
+{
+  tensao_placa = tensao_placa / 100;
+  lcd.setCursor(0, 0);
+  lcd.print("Voltagem : ");
+  lcd.print(tensao_placa);
+  lcd.setCursor(0, 1);
+  lcd.print("Capacida :");
+  tensao_placa = tensao_placa * 40;
+  lcd.print(tensao_placa);
+  lcd.print("%");
 
   if (compara_hor >= faixa) {
     if ((sValue_left > sValue_right) && (pos_horiz < up_edge)) //gira pra esquerda
@@ -145,6 +148,10 @@ void loop() {
       pos_horiz = pos_horiz - 15;
     s_horiz.write(pos_horiz);
     delay(1000);
+
+  }
+  
+flag_write =0;
   }
 }
 
@@ -176,5 +183,5 @@ void loop() {
 */
 
 /*
-
 */
+
