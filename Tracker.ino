@@ -1,69 +1,140 @@
-/****************************************************************************
 
+/****************************************************************************
     EA076 C - Projeto Final - Tracker.io
     Dimitri Reis        RA 145869
     Guilherme Frauches  RA 155591
-
     Placa solar que se ajusta de acordo com a incidencia luminosa e
     mostra a potencia gerada pela placa em um display lcd
-
  ****************************************************************************/
 
 #include <stdio.h>
+#include <Servo.h>
 #include "TimerOne.h"
-#include "LiquidCrystal.h"
 
-//(<pino RS>, <pino enable>, <pino D4>, <pino D5>, <pino D6>, <pino D7>)
-//Define os pinos que serão utilizados para ligação ao display
-LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
+const int LDR_left = A0;    // Pino referente ao LDR da esquerda
+const int LDR_up = A1;    // Pino referente ao LDR de cima
+const int LDR_right = A2;   // Pino referente ao LDR da direita
+const int LDR_down = A3;   // Pino referente ao LDR de baixo
+
+int sValue_left;     // Variavel que representa o valor lido do LDR
+int sValue_right;     // Variavel que representa o valor lido do LDR
+int sValue_up;     // Variavel que representa o valor lido do LDR
+int sValue_down;     // Variavel que representa o valor lido do LDR
+
+int compara_hor = 0;
+int compara_ver = 0;
+
+int pos_vert = 0;
+int pos_horiz = 90;
+
+/*int on_horiz=0;
+  int direction_horiz=0;
+  int on_vert=0;*/
+
+#define LED_left 13
+#define LED_right 12
+#define LED_up 11
+#define LED_down 6
+#define SERVO_H 10
+#define SERVO_V 5
+#define faixa 100  //faixa de compracao entre os LDRs
+#define up_edge 150
+#define low_edge 30
+
+Servo s_horiz;
+Servo s_vert;
 
 void setup() {
-  //Define o número de colunas e linhas do LCD
-  lcd.begin(16, 2);
-  lcd.setCursor (0, 0);
-  lcd.print(" Arduino based ");
-  lcd.setCursor(0, 1);
-  lcd.print("Digital Voltmeter");
-  delay(2000);
+  Serial.begin(9600);
 
-  /*
-    Timer1.initialize();                // Inicializacao da interrupcao por tempo
-    Timer1.attachInterrupt(Int_Timer);
+  pinMode(LED_left, OUTPUT);
+  pinMode(LED_right, OUTPUT);
+  pinMode(LED_up, OUTPUT);
+  pinMode(LED_down, OUTPUT);
 
-    Serial.begin(9600);
-    Wire.begin();*/
+  digitalWrite(LED_left, LOW);          // comandado pelo teclado matricial
+  digitalWrite(LED_right, LOW);
+  digitalWrite(LED_up, LOW);          // comandado pelo teclado matricial
+  digitalWrite(LED_down, LOW);
+
+  s_horiz.attach(SERVO_H);
+  s_vert.attach(SERVO_V);
+  s_horiz.write(0);
+  s_vert.write(0);
+
+  Timer1.initialize();                // Inicializacao da interrupcao por tempo
+  Timer1.attachInterrupt(Int_Timer);
+
 }
 
 /* Realiza o tratamento da interrupção */
-/*void Int_Timer() {
+void Int_Timer() {
   sValue_left = analogRead(LDR_left);
   sValue_right = analogRead(LDR_right);
-  if (pisca)                                          // Pisca o LED a cada 1 seg, se necessario
-    digitalWrite(ledPin, digitalRead(ledPin) ^ 1);
-  else
-    digitalWrite (ledPin, LOW);
-  }*/
+  compara_hor = abs(sValue_left - sValue_right);
 
-void loop() {
-  //Limpa a tela
-  lcd.clear();
-  //Posiciona o cursor na coluna 0, linha 0;
-  lcd.setCursor(0, 0);
-  //Envia o texto entre aspas para o LCD
-  lcd.print("Hello World");
-  lcd.setCursor(0, 1);
-  lcd.print("Testando");
+  sValue_up = analogRead(LDR_up);
+  sValue_down = analogRead(LDR_down);
+  compara_ver = abs(sValue_up - sValue_down);
 
-  /*     analog_value = analogRead(A0);
-     temp = (analog_value * 5.0) / 1024.0;
+  /* if(compara_hor >= faixa){
+     on_horiz=1;
+    }
 
-     voltage = temp/(0.0909);
-     if (voltage < 0.1)
-     {
-       voltage=0.0;
-     } */
+     on_horiz=1;
+    /*
+     Serial.print(sValue_left);
+     Serial.print(" ");
+     Serial.print(sValue_right);
+     Serial.print(" ");
+     Serial.print(compara_hor);
+     Serial.print(" ");
+     Serial.print(sValue_up);
+     Serial.print(" ");
+     Serial.print(sValue_down);
+     Serial.print(" ");
+     Serial.print(compara_ver);
+     Serial.print("\n");*/
+  Serial.print(sValue_left);
+  Serial.print(" ");
+  Serial.print(sValue_right);
+  Serial.print(" ");
+  Serial.print(compara_hor);
+  Serial.print(" ");
+  Serial.print(faixa);
+  Serial.print(" ");
+  Serial.print(pos_horiz);
+  Serial.print("\n");
+
 }
 
+void loop() {
+  if (compara_hor >= faixa) {
+    if ((sValue_left > sValue_right) && (pos_horiz < up_edge)) //gira pra esquerda
+      pos_horiz = pos_horiz + 15;
+    if ((sValue_left < sValue_right) && (pos_horiz > low_edge))
+      pos_horiz = pos_horiz - 15;
+    s_horiz.write(pos_horiz);
+    delay(1000);
+  }
+}
+
+/*if (compara_ver >= faixa) {
+  if (sValue_up < sValue_down) { //gira pra esquerda
+     digitalWrite(LED_up, HIGH);
+     digitalWrite(LED_down, LOW);
+   } else { //gira pra direita
+     digitalWrite(LED_up, LOW);
+     digitalWrite(LED_down, HIGH);
+   }
+  }*/
+/*} else {
+  digitalWrite(LED_left, LOW);          // comandado pelo teclado matricial
+  digitalWrite(LED_right, LOW);
+  digitalWrite(LED_up, LOW);          // comandado pelo teclado matricial
+  digitalWrite(LED_down, LOW);
+  }*/
+//}
 
 
 /*
@@ -76,10 +147,5 @@ void loop() {
 */
 
 /*
-  const int LDR_left = A1;    // Pino referente ao LDR da esquerda
-  const int LDR_right = A2;   // Pino referente ao LDR da direita
-  unsigned int sValue_left;     // Variavel que representa o valor lido do LDR
-  unsigned int sValue_right;     // Variavel que representa o valor lido do LDR
-  unsigned int faixa = 50;  //faixa de compracao entre os LDRs
-*/
 
+*/
