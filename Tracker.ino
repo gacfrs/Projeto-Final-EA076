@@ -7,145 +7,104 @@
     mostra a potencia gerada pela placa em um display lcd
  ****************************************************************************/
 
-#include <stdio.h>
 #include <Servo.h>
-#include "TimerOne.h"
+//defining Servos
+Servo servohori;
+int servoh = 90;
+int servoLimitHigh = 120;
+int servoLimitLow = 60;
 
-const int LDR_left = A0;    // Pino referente ao LDR da esquerda
-const int LDR_up = A1;    // Pino referente ao LDR de cima
-const int LDR_right = A2;   // Pino referente ao LDR da direita
-const int LDR_down = A3;   // Pino referente ao LDR de baixo
+#define faixa 100
 
-int sValue_left;     // Variavel que representa o valor lido do LDR
-int sValue_right;     // Variavel que representa o valor lido do LDR
-int sValue_up;     // Variavel que representa o valor lido do LDR
-int sValue_down;     // Variavel que representa o valor lido do LDR
+Servo servoverti;
+int servov = 90;
+//Assigning LDRs
+const int ldrleft = A0;    // Pino referente ao LDR da esquerda
+const int ldrup = A1;    // Pino referente ao LDR de cima
+const int ldrright = A2;   // Pino referente ao LDR da direita
+const int ldrdown = A3;
 
-int compara_hor = 0;
-int compara_ver = 0;
+#include <LiquidCrystal.h>
+//Define os pinos que serão utilizados para ligação ao display
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+int portasolar = A5;
+float tensao_placa = 0;
+void setup ()
+{
+  //Define o número de colunas e linhas do LCD
+  lcd.begin(16, 2);
 
-int pos_vert = 0;
-int pos_horiz = 90;
-
-/*int on_horiz=0;
-  int direction_horiz=0;
-  int on_vert=0;*/
-
-#define LED_left 13
-#define LED_right 12
-#define LED_up 11
-#define LED_down 6
-#define SERVO_H 10
-#define SERVO_V 5
-#define faixa 100  //faixa de compracao entre os LDRs
-#define up_edge 150
-#define low_edge 30
-
-Servo s_horiz;
-Servo s_vert;
-
-void setup() {
+  servohori.attach(10);
+  servohori.write(90);
+  servoverti.attach(6);
+  servoverti.write(90);
+  delay(500);
   Serial.begin(9600);
-
-  pinMode(LED_left, OUTPUT);
-  pinMode(LED_right, OUTPUT);
-  pinMode(LED_up, OUTPUT);
-  pinMode(LED_down, OUTPUT);
-
-  digitalWrite(LED_left, LOW);          // comandado pelo teclado matricial
-  digitalWrite(LED_right, LOW);
-  digitalWrite(LED_up, LOW);          // comandado pelo teclado matricial
-  digitalWrite(LED_down, LOW);
-
-  s_horiz.attach(SERVO_H);
-  s_vert.attach(SERVO_V);
-  s_horiz.write(0);
-  s_vert.write(0);
-
-  Timer1.initialize();                // Inicializacao da interrupcao por tempo
-  Timer1.attachInterrupt(Int_Timer);
-
 }
 
-/* Realiza o tratamento da interrupção */
-void Int_Timer() {
-  sValue_left = analogRead(LDR_left);
-  sValue_right = analogRead(LDR_right);
-  compara_hor = abs(sValue_left - sValue_right);
+void loop()
+{
+  servoh = servohori.read();
+  servov = servoverti.read();
+  //capturing analog values of each LDR
+  int up = analogRead(ldrup);
+  int down = analogRead(ldrdown) + 70;
+  int left = analogRead(ldrleft) + 70;
+  int right = analogRead(ldrright);
+  // calculating average
+  int dif_hor = abs(left - right);
+  int dif_ver = abs(up - down);
 
-  sValue_up = analogRead(LDR_up);
-  sValue_down = analogRead(LDR_down);
-  compara_ver = abs(sValue_up - sValue_down);
+  if (dif_ver >= faixa) {
+    if (up > down) { //gira pra esquerda
 
-  /* if(compara_hor >= faixa){
-     on_horiz=1;
-    }
-
-     on_horiz=1;
-    /*
-     Serial.print(sValue_left);
-     Serial.print(" ");
-     Serial.print(sValue_right);
-     Serial.print(" ");
-     Serial.print(compara_hor);
-     Serial.print(" ");
-     Serial.print(sValue_up);
-     Serial.print(" ");
-     Serial.print(sValue_down);
-     Serial.print(" ");
-     Serial.print(compara_ver);
-     Serial.print("\n");*/
-  Serial.print(sValue_left);
-  Serial.print(" ");
-  Serial.print(sValue_right);
-  Serial.print(" ");
-  Serial.print(compara_hor);
-  Serial.print(" ");
-  Serial.print(faixa);
-  Serial.print(" ");
-  Serial.print(pos_horiz);
-  Serial.print("\n");
-
-}
-
-void loop() {
-  if (compara_hor >= faixa) {
-    if ((sValue_left > sValue_right) && (pos_horiz < up_edge)) //gira pra esquerda
-      pos_horiz = pos_horiz + 15;
-    if ((sValue_left < sValue_right) && (pos_horiz > low_edge))
-      pos_horiz = pos_horiz - 15;
-    s_horiz.write(pos_horiz);
-    delay(1000);
+      if (servov >= servoLimitHigh)
+        servov = servoLimitHigh;
+      servoverti.write(servov + 10);
+      delay(10);
+    } else if (down > up) {
+      if (servov <= servoLimitLow)
+        servov = servoLimitLow;
+      servoverti.write(servov - 10);
+      delay(10);
+    } else
+      servoverti.write(servov);
   }
+
+  if (dif_hor >= faixa) {
+    if (left > right) { //gira pra esquerda
+
+      if (servoh <= servoLimitLow)
+        servoh = servoLimitLow;
+      servohori.write(servoh - 10);
+      delay(10);
+    }
+    else if (right > left)  {
+
+      if (servoh >= servoLimitHigh)
+        servoh = servoLimitHigh;
+      servohori.write(servoh + 10);
+      delay(10);
+    } else
+      servohori.write(servoh);
+    delay(50);
+  }
+
+  tensao_placa = analogRead(portasolar);
+  tensao_placa = map (tensao_placa, 0, 630, 0, 300);
+  tensao_placa = tensao_placa / 100;
+  //Limpa a tela
+  lcd.clear();
+  //Posiciona o cursor na coluna 3, linha 0;
+  lcd.setCursor(0, 0);
+  //Envia o texto entre aspas para o LCD
+  lcd.print("Tensao: ");
+  lcd.print(tensao_placa);
+  lcd.setCursor(0, 1);
+  lcd.print("Capacid.: ");
+  tensao_placa = tensao_placa * 33.33;
+  lcd.print(tensao_placa);
+  lcd.print("%");
+  
+  delay(500);
 }
-
-/*if (compara_ver >= faixa) {
-  if (sValue_up < sValue_down) { //gira pra esquerda
-     digitalWrite(LED_up, HIGH);
-     digitalWrite(LED_down, LOW);
-   } else { //gira pra direita
-     digitalWrite(LED_up, LOW);
-     digitalWrite(LED_down, HIGH);
-   }
-  }*/
-/*} else {
-  digitalWrite(LED_left, LOW);          // comandado pelo teclado matricial
-  digitalWrite(LED_right, LOW);
-  digitalWrite(LED_up, LOW);          // comandado pelo teclado matricial
-  digitalWrite(LED_down, LOW);
-  }*/
-//}
-
-
-/*
-   Referências
-   Servo: http://www.electronicshub.org/arduino-servo-motor/
-   Solar Tracker: http://www.electronicshub.org/arduino-solar-tracker/
-   Light Sensor: http://www.electronicshub.org/arduino-light-sensor/
-   Digital Voltmeter: http://www.electronicshub.org/digital-arduino-voltmeter/
-   LCD: http://blog.filipeflop.com/display/controlando-um-lcd-16x2-com-arduino.html
-*/
-
-/*
-
-*/
